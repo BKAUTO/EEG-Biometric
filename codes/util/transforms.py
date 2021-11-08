@@ -2,6 +2,9 @@ import torch
 import numpy as np
 import copy
 import scipy.signal as signal
+#-----------------------------#
+from pyts.image import MarkovTransitionField
+
 
 class filterBank(object):
 
@@ -94,4 +97,30 @@ class filterBank(object):
         data = torch.from_numpy(out).float()
         return data
 
+class MTF(object):
+    '''
+    Use Markov Transition Fields to transfer the time series to images
+    '''
+    def __init__(self, bins=8, image_size=128):
+        self.bins = bins
+        self.image_size = image_size
 
+    def mtfImaging(self, data, bins):
+        strategy = 'quantile'
+        X = data.reshape(1, -1)
+        n_samples, n_timestamps = X.shape
+        mtf = MarkovTransitionField(image_size=self.image_size, n_bins=bins, strategy=strategy)
+        tag_mtf = mtf.fit_transform(X)
+        return tag_mtf
+
+    def __call__(self, data1):
+        data = copy.deepcopy(data1)
+
+        # initialize output
+        data = np.swapaxes(data, 1, 2)
+        out  = np.zeros([*data.shape[:2], self.image_size, self.image_size])
+        for channel in range(out.shape[0]):
+            for fz in range(out.shape[1]):
+                out[channel, fz] = self.mtfImaging(data[channel, fz], self.bins)
+        data = torch.from_numpy(out).float()
+        return data

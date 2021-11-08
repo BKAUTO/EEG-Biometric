@@ -83,7 +83,7 @@ class FBCNet(nn.Module):
         self.lastLayer = self.LastBlock(m*nBands*strideFactor, nClass, doWeightNorm=doWeightNorm)
 
     def forward(self, x):
-        x = torch.squeeze(x.permute((0,4,2,3,1)), dim = 4)
+        x = x.permute((0,3,1,2))
         x = self.spatialConv(x)
         x = x.reshape([*x.shape[0:2], self.strideFactor, int(x.shape[3]/self.strideFactor)])
         x = self.temporalLayer(x)
