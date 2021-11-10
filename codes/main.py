@@ -6,15 +6,16 @@ from torch.utils.data import DataLoader
 from model.fbcnet import FBCNet
 import torch
 from torch import nn
+from torch.optim import lr_scheduler
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print('Using {} device'.format(device))
 
-learning_rate = 0.0001
+learning_rate = 0.001
 batch_size = 4
-subject = 3
+subject = 1
 data_path = "../data/"
-epochs = 200
+epochs = 300
 trained_model_path = "../trained/"
 
 def train(dataloader, model, loss_fn, optimizer):
@@ -35,7 +36,7 @@ def train(dataloader, model, loss_fn, optimizer):
             loss, current = loss.item(), batch * len(X)
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
-def test(dataloader, model, loss_fn, epoch):
+def test(dataloader, model, loss_fn, epoch, best_acc):
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
     model.eval()
@@ -49,7 +50,9 @@ def test(dataloader, model, loss_fn, epoch):
     test_loss /= num_batches
     correct /= size
     print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-    if epoch > epochs*0.95:
+    epoch_acc = 100.0*correct
+    if epoch > 270 and epoch_acc > 95 and epoch_acc > best_acc:
+        best_acc = epoch_acc
         torch.save(model.state_dict(), trained_model_path+"{}_trained_{}.pth".format(subject, epoch))
 
 if __name__ == '__main__':
@@ -64,28 +67,15 @@ if __name__ == '__main__':
     model = FBCNet(nChan=22).to(device)
     loss_fn = nn.NLLLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    # optimizer_final = torch.optim.Adam(model.parameters(), lr=learning_rate*0.1)
+    exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.8)
+    best_acc = 0
 
     for t in range(epochs):
         print(f"Epoch {t+1}\n-------------------------------")
         # if t < epochs*0.8:
         train(train_dataloader, model, loss_fn, optimizer)
+        exp_lr_scheduler.step()
         # else:
         #     train(train_dataloader, model, loss_fn, optimizer_final)
-        test(test_dataloader, model, loss_fn, t)
+        test(test_dataloader, model, loss_fn, t, best_acc)
     print("Done!")
-
-
-
-
-
-# X = torch.rand(4, 1, 22, 1124, 9, device=device)
-# model = FBCNet(nChan=22)
-# logits = model(X)
-# print(logits)
-# target = torch.tensor([1,1,1,1])
-# loss = nn.NLLLoss()
-# output = loss(logits, target)
-# y_pred = logits.argmax(1)
-# print(f"Predicted class: {y_pred}")
-# print(output)

@@ -6,14 +6,14 @@ import scipy.io as sio
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
-from transforms import filterBank
-from transforms import MTF
+# from transforms import filterBank
+# from transforms import MTF
 
 import tsia.plot
 
 
 class BCI2aDataset(Dataset):
-    def get_subject_data(self, subject, path, No_channels, No_trials, Window_Length, label=1, train=True):
+    def get_subject_data(self, subject, path, No_channels, No_trials, Window_Length, sample_ratio=1, label=1, train=True):
         No_valid_trial = 0
         data_return = np.zeros((No_trials, No_channels, Window_Length))
         class_return = np.zeros(No_trials)
@@ -30,7 +30,7 @@ class BCI2aDataset(Dataset):
             run_y = run[2]
             run_artif = run[5]
 
-            for trial in range(0, run_trial.size):
+            for trial in range(0, run_trial.size//sample_ratio):
                 if run_artif[trial] == 0:
                     data_return[No_valid_trial, :, :] = np.transpose(run_X[(int(run_trial[trial]+1.5*250)):(int(run_trial[trial]+6*250)), :No_channels])
                     class_return[No_valid_trial] = label 
@@ -44,18 +44,18 @@ class BCI2aDataset(Dataset):
     def __init__(self, subject, path, train=True, transform=None):
         self.transform = transform
         No_channels = 22
-        No_trials = 6*48
+        No_trials = 48
         Window_Length = int(4.5*250)
 
-        self.data_return, self.class_return = self.get_subject_data(subject, path, No_channels, No_trials, Window_Length, label=1, train=train)
+        self.data_return, self.class_return = self.get_subject_data(subject, path, No_channels, No_trials, Window_Length, sample_ratio=1, label=1, train=train)
         if train:
             for i in [x for x in range(1,6) if x != subject]:
-                negative_data, negative_class = self.get_subject_data(i, path, No_channels, No_trials//3, Window_Length, label=0, train=train)
+                negative_data, negative_class = self.get_subject_data(i, path, No_channels, No_trials, Window_Length, sample_ratio=4, label=0, train=train)
                 self.data_return = np.concatenate((self.data_return, negative_data), axis=0)
                 self.class_return = np.concatenate((self.class_return, negative_class), axis=0)
         else:
             for i in [x for x in range(6,10) if x != subject]:
-                negative_data, negative_class = self.get_subject_data(i, path, No_channels, No_trials//3, Window_Length, label=0, train=train)
+                negative_data, negative_class = self.get_subject_data(i, path, No_channels, No_trials, Window_Length, sample_ratio=4, label=0, train=train)
                 self.data_return = np.concatenate((self.data_return, negative_data), axis=0)
                 self.class_return = np.concatenate((self.class_return, negative_class), axis=0)
 
@@ -91,7 +91,3 @@ if __name__ == '__main__':
     _, mappable_image = tsia.plot.plot_markov_transition_field(mtf=data[19,5], ax=ax, reversed_cmap=True)
     plt.colorbar(mappable_image)
     plt.savefig("mappable_image")
-
-
-
-
