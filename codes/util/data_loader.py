@@ -44,18 +44,18 @@ class BCI2aDataset(Dataset):
     def __init__(self, subject, path, train=True, transform=None):
         self.transform = transform
         No_channels = 22
-        No_trials = 48
+        No_trials = 2*48
         Window_Length = int(4.5*250)
 
         self.data_return, self.class_return = self.get_subject_data(subject, path, No_channels, No_trials, Window_Length, sample_ratio=1, label=1, train=train)
         if train:
             for i in [x for x in range(1,6) if x != subject]:
-                negative_data, negative_class = self.get_subject_data(i, path, No_channels, No_trials, Window_Length, sample_ratio=4, label=0, train=train)
+                negative_data, negative_class = self.get_subject_data(i, path, No_channels, No_trials, Window_Length, sample_ratio=3, label=0, train=train)
                 self.data_return = np.concatenate((self.data_return, negative_data), axis=0)
                 self.class_return = np.concatenate((self.class_return, negative_class), axis=0)
         else:
             for i in [x for x in range(6,10) if x != subject]:
-                negative_data, negative_class = self.get_subject_data(i, path, No_channels, No_trials, Window_Length, sample_ratio=4, label=0, train=train)
+                negative_data, negative_class = self.get_subject_data(i, path, No_channels, No_trials, Window_Length, sample_ratio=3, label=0, train=train)
                 self.data_return = np.concatenate((self.data_return, negative_data), axis=0)
                 self.class_return = np.concatenate((self.class_return, negative_class), axis=0)
 
