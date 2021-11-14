@@ -63,8 +63,8 @@ class FBCNet(nn.Module):
         nBands: number of bands in the data
         ''' 
         return nn.Sequential(
-                Conv2dWithConstraint(nBands, m*nBands, (nChan, 1), groups= nBands,
-                                     max_norm = 1 , doWeightNorm = doWeightNorm, padding = 0),
+                Conv2dWithConstraint(nBands, m*nBands, (nChan, 1), groups=nBands,
+                                     max_norm=2 , doWeightNorm=doWeightNorm, padding = 0),
                 nn.BatchNorm2d(m*nBands),
                 swish()
                 )
@@ -102,7 +102,7 @@ class FBCNet(nn.Module):
             nn.BatchNorm2d(m*nBands*nTimeFilter),
             swish(),
             nn.Dropout2d(p=0.5),
-            Conv2dWithConstraint(m*nBands*nTimeFilter, m*nBands*nTimeFilter, (1,11), max_norm=1, doWeightNorm=doWeightNorm, bias=False, padding = (0,5)),
+            Conv2dWithConstraint(m*nBands*nTimeFilter, m*nBands*nTimeFilter, (1,11), max_norm=2, doWeightNorm=doWeightNorm, bias=False, padding = (0,5)),
             nn.BatchNorm2d(m*nBands*nTimeFilter),
             swish()
         )
@@ -110,7 +110,7 @@ class FBCNet(nn.Module):
     def DilateTempLayer(self, m, nBands, nTimeFilter, doWeightNorm=True):
         return nn.Sequential(
             nn.Dropout2d(p=0.5),
-            Conv2dWithConstraint(m*nBands, m*nBands*nTimeFilter, 1, max_norm=1, doWeightNorm=doWeightNorm, padding = 0),
+            Conv2dWithConstraint(m*nBands, m*nBands*nTimeFilter, 1, max_norm=2, doWeightNorm=doWeightNorm, padding = 0),
             nn.BatchNorm2d(m*nBands*nTimeFilter),
             swish(),
             nn.Dropout2d(p=0.5),
@@ -122,7 +122,7 @@ class FBCNet(nn.Module):
     def ConcatPooling(self, m, nBands, nTimeFilter):
         return nn.Sequential(
             nn.BatchNorm2d(2*m*nBands*nTimeFilter + m*nBands),
-            nn.MaxPool2d((1,9), stride=9, padding=0)
+            nn.MaxPool2d((1,45), stride=45, padding=0)
         )
 
     def Classifier(self, m, nBands, nTimeFilter, doWeightNorm=True):
@@ -141,7 +141,7 @@ class FBCNet(nn.Module):
         )
     
 
-    def __init__(self, nChan, nProjChan=30, nBands=9, m=16, nTimeFilter=6, doWeightNorm=False, strideFactor=125, nClass=2, *args, **kwargs):
+    def __init__(self, nChan, nProjChan=30, nBands=9, m=32, nTimeFilter=4, doWeightNorm=True, strideFactor=25, nClass=2, *args, **kwargs):
         super(FBCNet, self).__init__()
 
         # channel Projection
@@ -149,7 +149,7 @@ class FBCNet(nn.Module):
         # shape transformation
         self.shapeTrans = self.ShapeTrans(nProjChan, nProjChan, doWeightNorm=doWeightNorm)
         # create all the parallel SCB
-        self.spatialConv = self.SCB(m, nProjChan, nBands, doWeightNorm=doWeightNorm)
+        self.spatialConv = self.SCB(m, nChan, nBands, doWeightNorm=doWeightNorm)
         # pointWise conv after SCB
         self.pointWise = self.PointWise(m*nBands, m*nBands)
         # Variance Layer
@@ -162,17 +162,17 @@ class FBCNet(nn.Module):
         self.concatPooling = self.ConcatPooling(m, nBands, nTimeFilter)
         # classification
         self.classifier = self.Classifier(m, nBands, nTimeFilter, doWeightNorm=doWeightNorm)
-        self.lastLayer = self.LastBlock(76608, nClass, doWeightNorm=doWeightNorm)
+        self.lastLayer = self.LastBlock(14400, nClass, doWeightNorm=doWeightNorm)
 
     def forward(self, x):
         x = x.permute((0,3,1,2))    # n*9*22*1125
-        # Channel Projection
-        x = torch.unsqueeze(x, 3)
-        x = self.channelProj_op(x)
-        # Shape Transformation
-        for band in range(x.shape[1]):
-            x[:,band,:,:,:] = self.shapeTrans(x[:,band,:,:,:])
-        x = torch.squeeze(x)        # n*9*35*1125   
+        # # Channel Projection
+        # x = torch.unsqueeze(x, 3)
+        # x = self.channelProj_op(x)
+        # # Shape Transformation
+        # for band in range(x.shape[1]):
+        #     x[:,band,:,:,:] = self.shapeTrans(x[:,band,:,:,:])
+        # x = torch.squeeze(x)        # n*9*35*1125   
         # Spatial Conv
         x = self.spatialConv(x)     # n*(32*9)*1*1125
         # Variance Conv
