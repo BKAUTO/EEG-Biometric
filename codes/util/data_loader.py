@@ -44,7 +44,7 @@ class BCI2aDataset(Dataset):
     def __init__(self, subject, path, train=True, transform=None):
         self.transform = transform
         No_channels = 22
-        No_trials = 2*48
+        No_trials = 1*48
         Window_Length = int(4.5*250)
 
         self.data_return, self.class_return = self.get_subject_data(subject, path, No_channels, No_trials, Window_Length, sample_ratio=1, label=1, train=train)
@@ -65,7 +65,7 @@ class BCI2aDataset(Dataset):
         return self.data_return.shape[0]
 
     def __getitem__(self, index):
-        data = self.data_return[index,:,:1124]
+        data = self.data_return[index,:,:1125]
         if self.transform:
             data = self.transform(data)
         label = self.class_return[index]
