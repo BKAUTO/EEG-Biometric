@@ -97,14 +97,15 @@ class FBCNet(nn.Module):
     
     def StandTempLayer(self, m, nBands, nTimeFilter, doWeightNorm=True):
         return nn.Sequential(
+            # nn.Dropout2d(p=0.5),
+            # Conv2dWithConstraint(m*nBands, m*nBands*nTimeFilter, 1, max_norm=1, doWeightNorm=doWeightNorm, padding = 0),
+            # nn.BatchNorm2d(m*nBands*nTimeFilter),
+            # swish(),
             nn.Dropout2d(p=0.5),
-            Conv2dWithConstraint(m*nBands, m*nBands*nTimeFilter, 1, max_norm=1, doWeightNorm=doWeightNorm, padding = 0),
-            nn.BatchNorm2d(m*nBands*nTimeFilter),
+            Conv2dWithConstraint(m*nBands, nTimeFilter, (1,32), stride=32, max_norm=2, doWeightNorm=doWeightNorm, bias=False),
+            nn.BatchNorm2d(nTimeFilter),
             swish(),
-            nn.Dropout2d(p=0.5),
-            Conv2dWithConstraint(m*nBands*nTimeFilter, m*nBands*nTimeFilter, (1,11), max_norm=2, doWeightNorm=doWeightNorm, bias=False, padding = (0,5)),
-            nn.BatchNorm2d(m*nBands*nTimeFilter),
-            swish()
+            nn.MaxPool2d((1,4), stride=4, padding=0)
         )
 
     def DilateTempLayer(self, m, nBands, nTimeFilter, doWeightNorm=True):
@@ -128,9 +129,9 @@ class FBCNet(nn.Module):
     def Classifier(self, m, nBands, nTimeFilter, doWeightNorm=True):
         return nn.Sequential(
             nn.Dropout(p=0.5),
-            Conv2dWithConstraint(2*m*nBands*nTimeFilter+2*m*nBands, 2*m*nBands*nTimeFilter+2*m*nBands, (1,11), max_norm=1, doWeightNorm=doWeightNorm, bias=False),
-            nn.BatchNorm2d(2*m*nBands*nTimeFilter+2*m*nBands),
-            nn.MaxPool2d((1,3), stride=3, padding=0)
+            Conv2dWithConstraint(nTimeFilter+m*nBands, nTimeFilter+m*nBands, (1,1), max_norm=1, doWeightNorm=doWeightNorm, bias=False),
+            nn.BatchNorm2d(nTimeFilter+m*nBands),
+            # nn.MaxPool2d((1,3), stride=3, padding=0)
         )   
     
     def PointWise(self, nChan_in, nChan_out, doWeightNorm=True):
@@ -141,7 +142,7 @@ class FBCNet(nn.Module):
         )
     
 
-    def __init__(self, nChan, nProjChan=30, nBands=9, m=32, nTimeFilter=4, doWeightNorm=True, strideFactor=25, nClass=2, *args, **kwargs):
+    def __init__(self, nChan, nProjChan=30, nBands=9, m=32, nTimeFilter=28, doWeightNorm=True, strideFactor=5, nClass=2, *args, **kwargs):
         super(FBCNet, self).__init__()
 
         # channel Projection
@@ -157,12 +158,12 @@ class FBCNet(nn.Module):
         self.varLayer = LogVarLayer(dim=3)
         # temporal conv
         self.standTemporalLayer = self.StandTempLayer(m, nBands, nTimeFilter, doWeightNorm=doWeightNorm)
-        self.dilateTemporalLayer = self.DilateTempLayer(m, nBands, nTimeFilter, doWeightNorm=doWeightNorm)
+        # self.dilateTemporalLayer = self.DilateTempLayer(m, nBands, nTimeFilter, doWeightNorm=doWeightNorm)
         # Concat
-        self.concatPooling = self.ConcatPooling(m, nBands, nTimeFilter)
+        # self.concatPooling = self.ConcatPooling(m, nBands, nTimeFilter)
         # classification
         self.classifier = self.Classifier(m, nBands, nTimeFilter, doWeightNorm=doWeightNorm)
-        self.lastLayer = self.LastBlock(14400, nClass, doWeightNorm=doWeightNorm)
+        self.lastLayer = self.LastBlock((nTimeFilter+m*nBands)*strideFactor, nClass, doWeightNorm=doWeightNorm)
 
     def forward(self, x):
         x = x.permute((0,3,1,2))    # n*9*22*1125
@@ -180,16 +181,17 @@ class FBCNet(nn.Module):
         x_var = self.varLayer(x_var)
         x_var = torch.transpose(x_var, 2, 3)
         # Stand Temp
-        x_stand = self.standTemporalLayer(x)
-        # Dilate Temp
-        x_dilate = self.dilateTemporalLayer(x)
+        x = self.standTemporalLayer(x)
+        # # Dilate Temp
+        # x_dilate = self.dilateTemporalLayer(x)
         # Concat
-        x = torch.cat((x,x_stand),dim=1)
-        x = torch.cat((x,x_dilate),dim=1)
-        x = self.concatPooling(x)
+        # x = torch.cat((x,x_stand),dim=1)
+        # x = torch.cat((x,x_dilate),dim=1)
+        # x = self.concatPooling(x)
         x = torch.cat((x,x_var),dim=1)
         # classification
         x = self.classifier(x)
+        # print(x.shape)
         x = torch.flatten(x, start_dim=1)
         x = self.lastLayer(x)
         return x

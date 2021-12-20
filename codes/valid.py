@@ -18,10 +18,10 @@ subject = 3
 batch_size = 4
 outer = "outer"
 epoch = 193
-model = "../trained/"+str(subject)+"_"+outer+"/"+str(subject)+"_trained_"+str(epoch)+".pth"
+model = "../trained/"+"1_98.0_98.0.pth"
 
 def val(dataloader, model):
-    net = FBCNet(nChan=22).to(device)
+    net = FBCNet(nChan=10).to(device)
     net.load_state_dict(torch.load(model, map_location=device))
     net.eval()
     scores = []
@@ -57,7 +57,7 @@ def val(dataloader, model):
     plt.savefig("test_result")
 
 if __name__ == '__main__':
-    filterTransform = filterBank([[4,8],[8,12],[12,16],[16,20],[20,24],[24,28],[28,32],[32,36],[36,40]], 250)
+    filterTransform = filterBank([[4,8],[8,12],[12,16],[16,20],[20,24],[24,28],[28,32],[32,36],[36,40]], 160)
     test_data = BCI2aDataset(subject=subject, path=data_path, train=False, transform=filterTransform)
     test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
     val(test_dataloader, model)

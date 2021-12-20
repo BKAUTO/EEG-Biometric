@@ -10,13 +10,6 @@ from sklearn.preprocessing import normalize
 class ChannelSelection():
     def BIC(self, X, p_max=20):
         p, bic = self.compute_order(X, p_max=p_max)
-
-        plt.figure()
-        plt.plot(np.arange(p_max + 1), bic)
-        plt.xlabel('order')
-        plt.ylabel('BIC')
-        plt.savefig('BIC.png')
-
         return p
 
     def compute_order(self, X, p_max):
@@ -65,7 +58,6 @@ class ChannelSelection():
             if not np.isnan(bic[i]) and bic[i] < max:
                 max = bic[i]
                 p = i   
-        print(bic)
         # p = np.argmin(bic)
         return p, bic
     
@@ -192,7 +184,6 @@ class ChannelSelection():
 
     def select(self, X, select_num=10):
         p = self.BIC(X)
-        print(p)
         A_est, sigma = self.mvar_fit(X, p)
         sigma = np.diag(sigma)
         P, freqs = self.PDC(A_est, sigma)
