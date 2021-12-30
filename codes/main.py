@@ -14,11 +14,11 @@ print('Using {} device'.format(device))
 
 learning_rate = 0.001
 batch_size = 4
-subject = 1
+subject = 3
 data_path = "../data/physionet/physionet.org/files/eegmmidb/1.0.0"
 epochs = 300
 weight_decay = 0.01
-trained_model_path = "../trained/"
+trained_model_path = "../trained/20/"
 
 def train(dataloader, model, loss_fn, optimizer):
     size = len(dataloader.dataset)
@@ -70,6 +70,11 @@ if __name__ == '__main__':
     train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True, drop_last=True) 
     channels = train_data.channels()
 
+    # save channels
+    with open(str(subject)+'.txt', 'w') as filehandle:
+        for channel in channels:
+            filehandle.write('%s\n' % channel)
+
     intra_test_data = PhysioDataset(subject=subject, path=data_path, train="intra_test", transform=filterTransform, channels=channels)
     intra_test_dataloader = DataLoader(intra_test_data, batch_size=batch_size, shuffle=True, drop_last=True)
 
@@ -93,5 +98,5 @@ if __name__ == '__main__':
             inter_acc = test(inter_test_dataloader, model, loss_fn, t)
             if t > 250 and inter_acc >= best_inter_acc:
                 best_inter_acc = inter_acc
-                torch.save(model.state_dict(), "../trained/"+str(subject)+"_"+str(intra_acc)+"_"+str(inter_acc)+"_50"+".pth")
+                torch.save(model.state_dict(), "../trained/"+str(subject)+"_"+str(intra_acc)+"_"+str(inter_acc)+"_20"+".pth")
     print("Done!")

@@ -194,33 +194,33 @@ class PhysioDataset(Dataset):
             self.data_return, self.class_return = self.get_subject_data(subject, path, No_channels, label=1, train=train)
             # self.plot(self.data_return, "raw.png")
             # self.plot(self.data_return, "filter.png")
-            self.data_return = self.KMAR_PIC(self.data_return)
+            # self.data_return = self.KMAR_PIC(self.data_return)
             # self.plot(self.data_return, "KMAR.png")
             self.channelSelect()
             self.data_return = self.data_return[:,self.channel_selected,:]
-            for i in [x for x in range(1,50) if x != subject]:
+            for i in [x for x in range(1,21) if x != subject]:
                 negative_data, negative_class = self.get_subject_data(i, path, No_channels, label=0, train=train)
-                negative_data = self.KMAR_PIC(negative_data)
+                # negative_data = self.KMAR_PIC(negative_data)
                 negative_data = negative_data[:,self.channel_selected,:]
                 self.data_return = np.concatenate((self.data_return, negative_data[:2, :, :]), axis=0)
                 self.class_return = np.concatenate((self.class_return, negative_class[:2]), axis=0)
         elif train == 'intra_test':
             self.data_return, self.class_return = self.get_subject_data(subject, path, No_channels, label=1, train=train)
-            self.data_return = self.KMAR_PIC(self.data_return)
+            # self.data_return = self.KMAR_PIC(self.data_return)
             self.data_return = self.data_return[:,self.channel_selected,:]
-            for i in [x for x in range(1,50) if x != subject]:
+            for i in [x for x in range(1,21) if x != subject]:
                 negative_data, negative_class = self.get_subject_data(i, path, No_channels, label=0, train=train)
-                negative_data = self.KMAR_PIC(negative_data)
+                # negative_data = self.KMAR_PIC(negative_data)
                 negative_data = negative_data[:,self.channel_selected,:]
                 self.data_return = np.concatenate((self.data_return, negative_data[:2, :, :]), axis=0)
                 self.class_return = np.concatenate((self.class_return, negative_class[:2]), axis=0)
         elif train == 'inter_test':
             self.data_return, self.class_return = self.get_subject_data(subject, path, No_channels, label=1, train=train)
-            self.data_return = self.KMAR_PIC(self.data_return)
+            # self.data_return = self.KMAR_PIC(self.data_return)
             self.data_return = self.data_return[:,self.channel_selected,:]
-            for i in [x for x in range(50,100) if x != subject and x not in [88,92]]:
+            for i in [x for x in range(21,40) if x != subject and x not in [88,92]]:
                 negative_data, negative_class = self.get_subject_data(i, path, No_channels, label=0, train=train)
-                negative_data = self.KMAR_PIC(negative_data)
+                # negative_data = self.KMAR_PIC(negative_data)
                 negative_data = negative_data[:,self.channel_selected,:]
                 self.data_return = np.concatenate((self.data_return, negative_data[:2, :, :]), axis=0)
                 self.class_return = np.concatenate((self.class_return, negative_class[:2]), axis=0)
