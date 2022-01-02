@@ -53,7 +53,7 @@ class ChannelSelection():
             bic[p] += S
 
         max = np.inf
-        p = 0
+        p = 1
         for i in range(2, p_max + 1):
             if not np.isnan(bic[i]) and bic[i] < max:
                 max = bic[i]
@@ -183,7 +183,7 @@ class ChannelSelection():
         return P, freqs
 
     def select(self, X, select_num=10):
-        p = self.BIC(X)
+        p = self.BIC(X, p_max=20)
         A_est, sigma = self.mvar_fit(X, p)
         sigma = np.diag(sigma)
         P, freqs = self.PDC(A_est, sigma)

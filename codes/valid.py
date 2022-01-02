@@ -101,5 +101,5 @@ if __name__ == '__main__':
             filehandle.write('%s\n' % i)
     
     plt.legend()
-    plt.savefig("test_result")
+    plt.savefig("test_result_50")
     print(EER)

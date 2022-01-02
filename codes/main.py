@@ -14,11 +14,12 @@ print('Using {} device'.format(device))
 
 learning_rate = 0.001
 batch_size = 4
-subject = 3
-data_path = "../data/physionet/physionet.org/files/eegmmidb/1.0.0"
+subject = 1
+# data_path = "../data/physionet/physionet.org/files/eegmmidb/1.0.0"
+data_path = "../data/"
 epochs = 300
 weight_decay = 0.01
-trained_model_path = "../trained/20/"
+trained_model_path = "../trained/5/"
 
 def train(dataloader, model, loss_fn, optimizer):
     size = len(dataloader.dataset)
@@ -64,9 +65,9 @@ def test(dataloader, model, loss_fn, epoch):
     #     torch.save(model.state_dict(), trained_model_path+"{}_trained_{}.pth".format(subject, epoch))
 
 if __name__ == '__main__':
-    filterTransform = filterBank([[4,8],[8,12],[12,16],[16,20],[20,24],[24,28],[28,32],[32,36],[36,40]], 160)
+    filterTransform = filterBank([[4,8],[8,12],[12,16],[16,20],[20,24],[24,28],[28,32],[32,36],[36,40]], 250)
     
-    train_data = PhysioDataset(subject=subject, path=data_path, train="train", transform=filterTransform)
+    train_data = BCI2aDataset(subject=subject, path=data_path, train="train", transform=filterTransform)
     train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True, drop_last=True) 
     channels = train_data.channels()
 
@@ -75,13 +76,13 @@ if __name__ == '__main__':
         for channel in channels:
             filehandle.write('%s\n' % channel)
 
-    intra_test_data = PhysioDataset(subject=subject, path=data_path, train="intra_test", transform=filterTransform, channels=channels)
+    intra_test_data = BCI2aDataset(subject=subject, path=data_path, train="intra_test", transform=filterTransform, channels=channels)
     intra_test_dataloader = DataLoader(intra_test_data, batch_size=batch_size, shuffle=True, drop_last=True)
 
-    inter_test_data = PhysioDataset(subject=subject, path=data_path, train="inter_test", transform=filterTransform, channels=channels)
+    inter_test_data = BCI2aDataset(subject=subject, path=data_path, train="inter_test", transform=filterTransform, channels=channels)
     inter_test_dataloader = DataLoader(inter_test_data, batch_size=batch_size, shuffle=True, drop_last=True)
 
-    model = FBCNet(nChan=10).to(device)
+    model = FBCNet(nChan=12).to(device)
     # model = CP_MixedNet().to(device)
     loss_fn = nn.NLLLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -98,5 +99,5 @@ if __name__ == '__main__':
             inter_acc = test(inter_test_dataloader, model, loss_fn, t)
             if t > 250 and inter_acc >= best_inter_acc:
                 best_inter_acc = inter_acc
-                torch.save(model.state_dict(), "../trained/"+str(subject)+"_"+str(intra_acc)+"_"+str(inter_acc)+"_20"+".pth")
+                torch.save(model.state_dict(), "../trained/"+str(subject)+"_"+str(intra_acc)+"_"+str(inter_acc)+"_5"+".pth")
     print("Done!")
