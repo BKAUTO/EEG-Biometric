@@ -1,5 +1,6 @@
 import torch
 import glob
+import os
 import numpy as np
 from torch import nn
 from sklearn.metrics import det_curve, roc_curve
@@ -11,17 +12,22 @@ import matplotlib.pyplot as plt
 from scipy.optimize import brentq
 from scipy.interpolate import interp1d
 
+from collections import Counter
+
+
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print('Using {} device'.format(device))
 
 data_path = "../data/physionet/physionet.org/files/eegmmidb/1.0.0"
+# data_path = "../data/"
 # subject = 4
 batch_size = 4
 # model = "../trained/"+"4_*_50.pth"
 # channels_file = "../trained/4.txt"
 
 def val(dataloader, model, subject):
-    net = FBCNet(nChan=10).to(device)
+    net = FBCNet(nChan=32).to(device)
     net.load_state_dict(torch.load(glob.glob(model)[0], map_location=device))
     net.eval()
     scores = []
@@ -62,24 +68,26 @@ def val(dataloader, model, subject):
     return EER
 
 if __name__ == '__main__':
-    filterTransform = filterBank([[4,8],[8,12],[12,16],[16,20],[20,24],[24,28],[28,32],[32,36],[36,40]], 160)
+    # filterTransform = filterBank([[4,8],[8,12],[12,16],[16,20],[20,24],[24,28],[28,32],[32,36],[36,40]], 160)
 
-    EER = []
+    # EER = []
 
-    plt.plot([0, 20], [0, 20], '--', color=(0.6, 0.6, 0.6))
-    plt.title('Detection Error Tradeoff (DET) curves')
-    plt.grid(linestyle='--')
-    plt.xlim([0,20])
-    plt.ylim([0,20])
-    plt.xlabel("fpr(%)")
-    plt.ylabel("fnr(%)")
+    # plt.plot([0, 20], [0, 20], '--', color=(0.6, 0.6, 0.6))
+    # plt.title('Detection Error Tradeoff (DET) curves')
+    # plt.grid(linestyle='--')
+    # plt.xlim([0,20])
+    # plt.ylim([0,20])
+    # plt.xlabel("fpr(%)")
+    # plt.ylabel("fnr(%)")
+
+    channels = []
 
     for subject in range(1,11):
-        model = "../trained/"+"50/"+str(subject)+"_*_50.pth"
+        # model = "../trained/"+"32c/"+str(subject)+"_*_20.pth"
         channels_file = "../trained/"+"50/"+str(subject)+".txt"
 
         # define an empty list
-        channels = []
+        # channels = []
         # open file and read the content in a list
         with open(channels_file, 'r') as filehandle:
             for line in filehandle:
@@ -87,19 +95,30 @@ if __name__ == '__main__':
                 currentPlace = line[:-1]
                 # add item to the list
                 channels.append(int(currentPlace))
-        
-        intra_test_data = PhysioDataset(subject=subject, path=data_path, train="intra_test", transform=filterTransform, channels=channels)
-        intra_test_dataloader = DataLoader(intra_test_data, batch_size=batch_size, shuffle=True, drop_last=True)
 
-        # inter_test_data = PhysioDataset(subject=subject, path=data_path, train="inter_test", transform=filterTransform, channels=channels)
-        # inter_test_dataloader = DataLoader(inter_test_data, batch_size=batch_size, shuffle=True, drop_last=True)
+    c = Counter(channels)
+    print(c.most_common(10))
+
         
-        EER.append(val(intra_test_dataloader, model, subject))
+    #     # intra_test_data = PhysioDataset(subject=subject, path=data_path, train="intra_test", transform=filterTransform, channels=channels)
+    #     # intra_test_dataloader = DataLoader(intra_test_data, batch_size=batch_size, shuffle=True, drop_last=True)
+
+    #     inter_test_data = PhysioDataset(subject=subject, path=data_path, train="inter_test", transform=filterTransform, channels=channels)
+    #     inter_test_dataloader = DataLoader(inter_test_data, batch_size=batch_size, shuffle=True, drop_last=True)
+
+    #     # intra_test_data = BCI2aDataset(subject=subject, path=data_path, train="intra_test", transform=filterTransform, channels=channels)
+    #     # intra_test_dataloader = DataLoader(intra_test_data, batch_size=batch_size, shuffle=True, drop_last=True)
+
+    #     # inter_test_data = BCI2aDataset(subject=subject, path=data_path, train="inter_test", transform=filterTransform, channels=channels)
+    #     # inter_test_dataloader = DataLoader(inter_test_data, batch_size=batch_size, shuffle=True, drop_last=True)
+
+        
+    #     EER.append(val(inter_test_dataloader, model, subject))
     
-    with open('EER.txt', 'w') as filehandle:
-        for i in EER:
-            filehandle.write('%s\n' % i)
+    # with open('EER_32c_20_inter.txt', 'w') as filehandle:
+    #     for i in EER:
+    #         filehandle.write('%s\n' % i)
     
-    plt.legend()
-    plt.savefig("test_result_50")
-    print(EER)
+    # plt.legend()
+    # plt.savefig("test_result_inter_32c_20")
+    # print(EER)
