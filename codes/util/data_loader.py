@@ -278,9 +278,10 @@ class PhysioDataset(Dataset):
 
         return data_return, class_return
     
-    def __init__(self, subject, path, train='train', transform=None, channels=None):
+    def __init__(self, subject, path, train='train', transform=None, channels=None, use_channel_no=0):
         self.channel_selected = channels
         self.transform = transform
+        self.use_channel_no = use_channel_no
         No_channels = 64
 
         if train == 'train':
@@ -436,10 +437,10 @@ class PhysioDataset(Dataset):
         channelSelection = ChannelSelection()
         channelCount = np.zeros(data.shape[1])
         for i in range(data.shape[0]):
-            trial_channel = channelSelection.select(data[i,:,:], 32)
+            trial_channel = channelSelection.select(data[i,:,:], self.use_channel_no)
             for chan in trial_channel:
                 channelCount[chan] = channelCount[chan] + 1
-        self.channel_selected = np.argpartition(channelCount, -32)[-32:]
+        self.channel_selected = np.argpartition(channelCount, -self.use_channel_no)[-self.use_channel_no:]
 
     def channels(self):
         return self.channel_selected
