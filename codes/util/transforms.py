@@ -4,6 +4,7 @@ import copy
 import scipy.signal as signal
 #-----------------------------#
 from pyts.image import MarkovTransitionField
+from scipy.signal import firwin, butter, lfilter
 
 
 class filterBank(object):
@@ -87,7 +88,7 @@ class filterBank(object):
         data = copy.deepcopy(data1)
 
         # initialize output
-        out  = np.zeros([*data.shape, len(self.filtBank)])
+        out = np.zeros([*data.shape, len(self.filtBank)])
 
         # repetitively filter the data.
         for i, filtBand in enumerate(self.filtBank):
@@ -122,5 +123,70 @@ class MTF(object):
         for channel in range(out.shape[0]):
             for fz in range(out.shape[1]):
                 out[channel, fz] = self.mtfImaging(data[channel, fz], self.bins)
+        data = torch.from_numpy(out).float()
+        return data
+
+class gammaFilter(object):
+    '''
+    low-pass, high-pass, band-pass, keep only gamma band
+    '''
+    def __init__(self, lowcut=0.16, highcut=40, band=[26,40], fs=160, ntaps=128):
+        self.lowcut = lowcut
+        self.highcut = highcut
+        self.band = band
+        self.fs = fs
+        self.ntaps = ntaps
+    
+    def butter_lowpass(self, cutoff, fs, order=5):
+        nyq = 0.5 * fs
+        normal_cutoff = cutoff / nyq
+        b, a = butter(order, normal_cutoff, btype='low', analog=False)
+        return b, a
+
+    def butter_lowpass_filter(self, data, cutoff, fs, order=5):
+        b, a = self.butter_lowpass(cutoff, fs, order=order)
+        y = lfilter(b, a, data)
+        return y
+
+    def butter_highpass(self, cutoff, fs, order=5):
+        nyq = 0.5 * fs
+        normal_cutoff = cutoff / nyq
+        b, a = butter(order, normal_cutoff, btype='high', analog=False)
+        return b, a
+
+    def butter_highpass_filter(self, data, cutoff, fs, order=5):
+        b, a = self.butter_highpass(cutoff, fs, order=order)
+        y = lfilter(b, a, data)
+        return y
+
+    def bandpass_firwin(self, ntaps, lowcut, highcut, fs, window='hann'):
+        nyq = 0.5 * fs
+        filter = firwin(ntaps, [lowcut, highcut], nyq=nyq, pass_zero=False, window=window, scale=False)
+        return filter
+
+    def firwin_bandpass_filter(self, data, ntaps, lowcut, highcut, fs, window='hann'):
+        filter = self.bandpass_firwin(ntaps, lowcut, highcut, fs, window)
+        y = lfilter(filter, 1, data)
+        return y
+
+    def __call__(self, data1):
+        data = copy.deepcopy(data1)
+        out = np.zeros([*data.shape])
+
+        for channel in range(data.shape[0]):
+            out[channel,:] = self.butter_lowpass_filter(data[channel,:], self.lowcut, self.fs)
+            out[channel,:] = self.butter_highpass_filter(data[channel,:], self.highcut, self.fs)
+            out[channel,:] = self.firwin_bandpass_filter(data[channel,:], self.ntaps, self.band[0], self.band[1], self.fs)
+        
+        data = torch.from_numpy(out).float()
+        return data
+
+class MSD(object):
+    def __call__(self, data1):
+        data = copy.deepcopy(data1).numpy()
+        out = np.zeros([data.shape[0]*2, 1])
+        for channel in range(data.shape[0]//2):
+            out[channel,:] = np.mean(data[channel,:])
+            out[channel+data.shape[0],:] = np.std(data[channel,:])
         data = torch.from_numpy(out).float()
         return data

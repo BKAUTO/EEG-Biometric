@@ -3,11 +3,13 @@ from numpy.core.numeric import outer
 from util.data_loader import BCI2aDataset, PhysioDataset
 from util.transforms import filterBank
 from torch.utils.data import DataLoader
+from model.svm import SVM
 from model.mixed_fbcnet import FBCNet
 from model.cp_mixednet import CP_MixedNet
 import torch
 from torch import nn
 from torch.optim import lr_scheduler
+from sklearn.metrics import accuracy_score
 
 import os
 import yaml
@@ -32,6 +34,8 @@ def train(dataloader, model, loss_fn, optimizer):
     model.train()
     correct = 0
     for batch, (X, y) in enumerate(dataloader):
+        print(X.shape)
+        print(y.shape)
         X, y = X.to(device, dtype=torch.float), y.to(device)
         # Compute prediction error
         pred = model(X)
@@ -48,7 +52,20 @@ def train(dataloader, model, loss_fn, optimizer):
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
     correct /= size
     print(f"Train Error: \n Accuracy: {(100*correct):>0.1f}%\n")
-    
+
+def train_svm(dataloader, model):
+    data, label = next(iter(dataloader))
+    data = data.numpy()
+    label = label.numpy()
+    model.train(data, label)
+
+def test_svm(dataloader, model):
+    data, label = next(iter(dataloader))
+    data = data.numpy()
+    label = label.numpy()
+    predicted = model.predict(data)
+    print("Test Error: \n Accuracy: {}%".format(accuracy_score(label, predicted)*100))
+
 
 def test(dataloader, model, loss_fn, epoch):
     size = len(dataloader.dataset)
@@ -66,9 +83,6 @@ def test(dataloader, model, loss_fn, epoch):
     print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
     epoch_acc = 100.0*correct
     return epoch_acc
-    # if epoch > 480 and epoch_acc > 95 and epoch_acc > best_acc:
-    #     best_acc = epoch_acc
-    #     torch.save(model.state_dict(), trained_model_path+"{}_trained_{}.pth".format(subject, epoch))
 
 if __name__ == '__main__':
     if config["transform"]["name"] == "nBand":    
@@ -106,20 +120,24 @@ if __name__ == '__main__':
     if config["model"]["name"] == "FBCNet":
         model = FBCNet(nChan=config["channel"]["number"]).to(device)
 
-    loss_fn = nn.NLLLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=config["optimizer"]["initial_lr"], weight_decay=config["optimizer"]["weight_decay"])
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
-    best_intra_acc = 0
-    best_inter_acc = 0
+        loss_fn = nn.NLLLoss()
+        optimizer = torch.optim.Adam(model.parameters(), lr=config["optimizer"]["initial_lr"], weight_decay=config["optimizer"]["weight_decay"])
+        exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=40, gamma=0.1)
+        best_intra_acc = 0
+        best_inter_acc = 0
 
-    for t in range(config["train"]["epochs"]):
-        print(f"Epoch {t+1}\n-------------------------------")
-        train(train_dataloader, model, loss_fn, optimizer)
-        exp_lr_scheduler.step()
-        if (t > 50):
-            intra_acc = test(intra_test_dataloader, model, loss_fn, t)
-            inter_acc = test(inter_test_dataloader, model, loss_fn, t)
-            if t > 250 and inter_acc >= best_inter_acc:
-                best_inter_acc = inter_acc
-                torch.save(model.state_dict(), "../trained/"+str(config["train"]["subject"])+"_"+str(intra_acc)+"_"+str(inter_acc)+"_20"+".pth")
-    print("Done!")
+        for t in range(config["train"]["epochs"]):
+            print(f"Epoch {t+1}\n-------------------------------")
+            train(train_dataloader, model, loss_fn, optimizer)
+            exp_lr_scheduler.step()
+            if (t > 50):
+                intra_acc = test(intra_test_dataloader, model, loss_fn, t)
+                inter_acc = test(inter_test_dataloader, model, loss_fn, t)
+                if t > 250 and inter_acc >= best_inter_acc:
+                    best_inter_acc = inter_acc
+                    torch.save(model.state_dict(), "../trained/"+str(config["train"]["subject"])+"_"+str(intra_acc)+"_"+str(inter_acc)+"_20"+".pth")
+        print("Done!")
+
+    if config["model"]["name"] == "SVM":
+        model = SVM()
+        model.train

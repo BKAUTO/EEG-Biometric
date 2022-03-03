@@ -11,9 +11,9 @@ from picard import picard
 from scipy.stats import skew, iqr, zscore, kurtosis, entropy
 from sklearn.cluster import KMeans
 from sklearn.decomposition import FastICA
-from .transforms import filterBank
+from transforms import filterBank, gammaFilter, MSD
 # from transforms import MTF
-from .PDC import ChannelSelection
+from PDC import ChannelSelection
 
 import tsia.plot
 
@@ -288,33 +288,33 @@ class PhysioDataset(Dataset):
             self.data_return, self.class_return = self.get_subject_data(subject, path, No_channels, label=1, train=train)
             # self.plot(self.data_return, "raw.png")
             # self.plot(self.data_return, "filter.png")
-            self.data_return = self.KMAR_PIC(self.data_return)
+            # self.data_return = self.KMAR_PIC(self.data_return)
             # self.plot(self.data_return, "KMAR.png")
             self.channelSelect()
             self.data_return = self.data_return[:,self.channel_selected,:]
-            for i in [x for x in range(1,21) if x != subject]:
+            for i in [x for x in range(1,50) if x != subject]:
                 negative_data, negative_class = self.get_subject_data(i, path, No_channels, label=0, train=train)
-                negative_data = self.KMAR_PIC(negative_data)
+                # negative_data = self.KMAR_PIC(negative_data)
                 negative_data = negative_data[:,self.channel_selected,:]
                 self.data_return = np.concatenate((self.data_return, negative_data[:5, :, :]), axis=0)
                 self.class_return = np.concatenate((self.class_return, negative_class[:5]), axis=0)
         elif train == 'intra_test':
             self.data_return, self.class_return = self.get_subject_data(subject, path, No_channels, label=1, train=train)
-            self.data_return = self.KMAR_PIC(self.data_return)
+            # self.data_return = self.KMAR_PIC(self.data_return)
             self.data_return = self.data_return[:,self.channel_selected,:]
-            for i in [x for x in range(1,21) if x != subject]:
+            for i in [x for x in range(1,50) if x != subject]:
                 negative_data, negative_class = self.get_subject_data(i, path, No_channels, label=0, train=train)
-                negative_data = self.KMAR_PIC(negative_data)
+                # negative_data = self.KMAR_PIC(negative_data)
                 negative_data = negative_data[:,self.channel_selected,:]
                 self.data_return = np.concatenate((self.data_return, negative_data[:5, :, :]), axis=0)
                 self.class_return = np.concatenate((self.class_return, negative_class[:5]), axis=0)
         elif train == 'inter_test':
             self.data_return, self.class_return = self.get_subject_data(subject, path, No_channels, label=1, train=train)
-            self.data_return = self.KMAR_PIC(self.data_return)
+            # self.data_return = self.KMAR_PIC(self.data_return)
             self.data_return = self.data_return[:,self.channel_selected,:]
-            for i in [x for x in range(21,40) if x != subject and x not in [88,92]]:
+            for i in [x for x in range(51,100) if x != subject and x not in [88,92]]:
                 negative_data, negative_class = self.get_subject_data(i, path, No_channels, label=0, train=train)
-                negative_data = self.KMAR_PIC(negative_data)
+                # negative_data = self.KMAR_PIC(negative_data)
                 negative_data = negative_data[:,self.channel_selected,:]
                 self.data_return = np.concatenate((self.data_return, negative_data[:5, :, :]), axis=0)
                 self.class_return = np.concatenate((self.class_return, negative_class[:5]), axis=0)
@@ -324,9 +324,11 @@ class PhysioDataset(Dataset):
     
     def __getitem__(self, index):
         data = self.data_return[index,:,:640]
+        self.plot(data[4,:], "raw.png")
         if self.transform:
             data = self.transform(data)
         label = self.class_return[index]
+        self.plot(data[4,:], "filtered.png")
 
         return data, int(label)
     
@@ -447,16 +449,22 @@ class PhysioDataset(Dataset):
 
     def plot(self, data, title):
         # data = np.transpose(data, (1,0))
-        fig, axs = plt.subplots(64, 1, figsize=(20,40))
-        for i in range(64):
+        fig, axs = plt.subplots(2, 1, figsize=(20,40))
+        for i in range(2):
             if title == "ICA_component.png":
                 axs[i].plot(data[:, i])
             else:
-                axs[i].plot(data[20, i, :])
+                axs[i].plot(data)
         fig.savefig(title)
     
 if __name__ == '__main__':
-    filterTransform = filterBank([[4,8],[8,12],[12,16],[16,20],[20,24],[24,28],[28,32],[32,36],[36,40]], 160)
+    # filterTransform = filterBank([[4,8],[8,12],[12,16],[16,20],[20,24],[24,28],[28,32],[32,36],[36,40]], 160)
+    filterTransform = gammaFilter()
+    data_transform = transforms.Compose([filterTransform, MSD()])
 
-    train_data = PhysioDataset(1, "../../data/physionet/physionet.org/files/eegmmidb/1.0.0", train='train', transform=filterTransform)
-    train_dataloader = DataLoader(train_data, batch_size=1, shuffle=True)
+    train_data = PhysioDataset(1, "../../data/physionet/physionet.org/files/eegmmidb/1.0.0", train='train', transform=data_transform)
+    train_dataloader = DataLoader(train_data, batch_size=len(train_data), shuffle=True)
+
+    data, classes = next(iter(train_dataloader))
+    print(data.shape)
+
