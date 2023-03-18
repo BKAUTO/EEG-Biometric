@@ -1,0 +1,27 @@
+dataset:
+  name: PhysioDataset
+  location: ../data/physionet/physionet.org/files/eegmmidb/1.0.0
+  preprocess: false
+
+model:
+  name: MICNN
+
+optimizer:
+  initial_lr: 0.0001
+  weight_decay: 0.01
+
+channel:
+  number: 17
+  select: true
+
+transform:
+  name: Normal
+
+train:
+  subject: 10
+  batch_size: 8
+  epochs: 300
+  trained_model_path: ../trained/
+
+evaluate:
+  batch_size: 8

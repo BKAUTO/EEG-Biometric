@@ -1,0 +1,21 @@
+dataset:
+  name: PhysioDataset
+  location: ../data/physionet/physionet.org/files/eegmmidb/1.0.0
+  preprocess: false
+
+model:
+  name: HMM
+
+channel:
+  number: 64
+  select: false
+
+transform:
+  name: gammaFilter
+
+train:
+  subject: 2
+  batch_size: all
+
+evaluate:
+  batch_size: all

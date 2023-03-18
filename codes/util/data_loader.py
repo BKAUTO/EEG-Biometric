@@ -11,11 +11,11 @@ from picard import picard
 from scipy.stats import skew, iqr, zscore, kurtosis, entropy
 from sklearn.cluster import KMeans
 from sklearn.decomposition import FastICA
-from transforms import filterBank, gammaFilter, MSD
+from .transforms import filterBank, gammaFilter, MSD, Energy_Wavelet
 # from transforms import MTF
-from PDC import ChannelSelection
+from .PDC import ChannelSelection
 
-import tsia.plot
+# import tsia.plot
 
 
 class BCI2aDataset(Dataset):
@@ -51,8 +51,11 @@ class BCI2aDataset(Dataset):
 
         return data_return, class_return
 
-    def __init__(self, subject, path, train='train', transform=None, channels=None):
-        self.channel_selected = channels
+    def __init__(self, subject, path, train='train', transform=None, channels=None, select_channel=False, preprocess=False):
+        if channels is None:
+            self.channel_selected = [x for x in range(22)]
+        else:
+            self.channel_selected = channels
         self.transform = transform
         No_channels = 22
         No_trials = int(2*48)
@@ -61,33 +64,40 @@ class BCI2aDataset(Dataset):
         if train == 'train':
             self.data_return, self.class_return = self.get_subject_data(subject, path, No_channels, No_trials, Window_Length, sample_ratio=1, label=1, train=train)
             # self.plot(self.data_return, "raw.png")
-            # self.data_return = self.KMAR_PIC(self.data_return)
+            if preprocess:
+                self.data_return = self.KMAR_PIC(self.data_return)
             # self.plot(self.data_return, "KMAR.png")
-            self.channelSelect()
+            if select_channel:
+                self.channelSelect()
             self.data_return = self.data_return[:,self.channel_selected,:]
             for i in [x for x in range(1,5) if x != subject]:
                 negative_data, negative_class = self.get_subject_data(i, path, No_channels, No_trials, Window_Length, sample_ratio=2, label=0, train=train)
-                # negative_data = self.KMAR_PIC(negative_data)
+                if preprocess:
+                    negative_data = self.KMAR_PIC(negative_data)
                 negative_data = negative_data[:,self.channel_selected,:]
                 self.data_return = np.concatenate((self.data_return, negative_data), axis=0)
                 self.class_return = np.concatenate((self.class_return, negative_class), axis=0)
         elif train == 'intra_test':
             self.data_return, self.class_return = self.get_subject_data(subject, path, No_channels, No_trials, Window_Length, sample_ratio=1, label=1, train=train)
-            # self.data_return = self.KMAR_PIC(self.data_return)
+            if preprocess:
+                self.data_return = self.KMAR_PIC(self.data_return)
             self.data_return = self.data_return[:,self.channel_selected,:]
             for i in [x for x in range(1,5) if x != subject]:
                 negative_data, negative_class = self.get_subject_data(i, path, No_channels, No_trials, Window_Length, sample_ratio=2, label=0, train=train)
-                # negative_data = self.KMAR_PIC(negative_data)
+                if preprocess:
+                    negative_data = self.KMAR_PIC(negative_data)
                 negative_data = negative_data[:,self.channel_selected,:]
                 self.data_return = np.concatenate((self.data_return, negative_data), axis=0)
                 self.class_return = np.concatenate((self.class_return, negative_class), axis=0)
         elif train == 'inter_test':
             self.data_return, self.class_return = self.get_subject_data(subject, path, No_channels, No_trials, Window_Length, sample_ratio=1, label=1, train=train)
-            # self.data_return = self.KMAR_PIC(self.data_return)
+            if preprocess:
+                self.data_return = self.KMAR_PIC(self.data_return)
             self.data_return = self.data_return[:,self.channel_selected,:]
             for i in [x for x in range(5,10) if x != subject]:
                 negative_data, negative_class = self.get_subject_data(i, path, No_channels, No_trials, Window_Length, sample_ratio=2, label=0, train=train)
-                # negative_data = self.KMAR_PIC(negative_data)
+                if preprocess:
+                    negative_data = self.KMAR_PIC(negative_data)
                 negative_data = negative_data[:,self.channel_selected,:]
                 self.data_return = np.concatenate((self.data_return, negative_data), axis=0)
                 self.class_return = np.concatenate((self.class_return, negative_class), axis=0)
@@ -278,8 +288,11 @@ class PhysioDataset(Dataset):
 
         return data_return, class_return
     
-    def __init__(self, subject, path, train='train', transform=None, channels=None, use_channel_no=0):
-        self.channel_selected = channels
+    def __init__(self, subject, path, train='train', transform=None, select_channel=False, preprocess=False, channels=None, use_channel_no=0):
+        if channels is None:
+            self.channel_selected = [x for x in range(64)]
+        else:
+            self.channel_selected = channels
         self.transform = transform
         self.use_channel_no = use_channel_no
         No_channels = 64
@@ -288,33 +301,41 @@ class PhysioDataset(Dataset):
             self.data_return, self.class_return = self.get_subject_data(subject, path, No_channels, label=1, train=train)
             # self.plot(self.data_return, "raw.png")
             # self.plot(self.data_return, "filter.png")
-            # self.data_return = self.KMAR_PIC(self.data_return)
+            if preprocess:
+                self.data_return = self.KMAR_PIC(self.data_return)
             # self.plot(self.data_return, "KMAR.png")
-            self.channelSelect()
+            if select_channel:
+                # self.channelSelect()
+                self.channel_selected = [9,14,15,16,17,18,19,21,22,62]
             self.data_return = self.data_return[:,self.channel_selected,:]
-            for i in [x for x in range(1,50) if x != subject]:
+            for i in [x for x in range(1,21) if x != subject]:
                 negative_data, negative_class = self.get_subject_data(i, path, No_channels, label=0, train=train)
-                # negative_data = self.KMAR_PIC(negative_data)
+                if preprocess:
+                    negative_data = self.KMAR_PIC(negative_data)
                 negative_data = negative_data[:,self.channel_selected,:]
                 self.data_return = np.concatenate((self.data_return, negative_data[:5, :, :]), axis=0)
                 self.class_return = np.concatenate((self.class_return, negative_class[:5]), axis=0)
         elif train == 'intra_test':
             self.data_return, self.class_return = self.get_subject_data(subject, path, No_channels, label=1, train=train)
-            # self.data_return = self.KMAR_PIC(self.data_return)
+            if preprocess:
+                self.data_return = self.KMAR_PIC(self.data_return)
             self.data_return = self.data_return[:,self.channel_selected,:]
-            for i in [x for x in range(1,50) if x != subject]:
+            for i in [x for x in range(1,21) if x != subject]:
                 negative_data, negative_class = self.get_subject_data(i, path, No_channels, label=0, train=train)
-                # negative_data = self.KMAR_PIC(negative_data)
+                if preprocess:
+                    negative_data = self.KMAR_PIC(negative_data)
                 negative_data = negative_data[:,self.channel_selected,:]
                 self.data_return = np.concatenate((self.data_return, negative_data[:5, :, :]), axis=0)
                 self.class_return = np.concatenate((self.class_return, negative_class[:5]), axis=0)
         elif train == 'inter_test':
             self.data_return, self.class_return = self.get_subject_data(subject, path, No_channels, label=1, train=train)
-            # self.data_return = self.KMAR_PIC(self.data_return)
+            if preprocess:
+                self.data_return = self.KMAR_PIC(self.data_return)
             self.data_return = self.data_return[:,self.channel_selected,:]
-            for i in [x for x in range(51,100) if x != subject and x not in [88,92]]:
+            for i in [x for x in range(21,40) if x != subject and x not in [88,92]]:
                 negative_data, negative_class = self.get_subject_data(i, path, No_channels, label=0, train=train)
-                # negative_data = self.KMAR_PIC(negative_data)
+                if preprocess:
+                    negative_data = self.KMAR_PIC(negative_data)
                 negative_data = negative_data[:,self.channel_selected,:]
                 self.data_return = np.concatenate((self.data_return, negative_data[:5, :, :]), axis=0)
                 self.class_return = np.concatenate((self.class_return, negative_class[:5]), axis=0)
@@ -324,11 +345,11 @@ class PhysioDataset(Dataset):
     
     def __getitem__(self, index):
         data = self.data_return[index,:,:640]
-        self.plot(data[4,:], "raw.png")
+        # self.plot(data[10,:], "raw.png")
         if self.transform:
             data = self.transform(data)
         label = self.class_return[index]
-        self.plot(data[4,:], "filtered.png")
+        # self.plot(data[10,:], "filtered.png")
 
         return data, int(label)
     
@@ -456,13 +477,13 @@ class PhysioDataset(Dataset):
             else:
                 axs[i].plot(data)
         fig.savefig(title)
+        plt.close(fig)
     
 if __name__ == '__main__':
     # filterTransform = filterBank([[4,8],[8,12],[12,16],[16,20],[20,24],[24,28],[28,32],[32,36],[36,40]], 160)
-    filterTransform = gammaFilter()
-    data_transform = transforms.Compose([filterTransform, MSD()])
+    filterTransform = gammaFilter(band=[8,30])
 
-    train_data = PhysioDataset(1, "../../data/physionet/physionet.org/files/eegmmidb/1.0.0", train='train', transform=data_transform)
+    train_data = PhysioDataset(1, "../../data/physionet/physionet.org/files/eegmmidb/1.0.0", train='train', transform=filterTransform, use_channel_no=64, preprocess=False, select_channel=False)
     train_dataloader = DataLoader(train_data, batch_size=len(train_data), shuffle=True)
 
     data, classes = next(iter(train_dataloader))

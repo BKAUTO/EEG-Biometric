@@ -64,7 +64,7 @@ class CP_MixedNet(nn.Module):
     def forward(self, x):
         x = torch.unsqueeze(x, 2)
         x = F.elu(self.batchnorm_proj_tranf(self.channelProj(x)))
-        #print('Channel Projection:',x.shape)
+        # print('Channel Projection:',x)
         x = F.elu(self.batchnorm_proj_tranf(self.shapeTrans(x)))
         #print('before Shape Transformation:',x.shape)
         x = torch.transpose(x, 1, 2)
@@ -74,7 +74,7 @@ class CP_MixedNet(nn.Module):
         x = F.elu(self.batchnorm2(self.conv2(self.drop2(x))))
         #print('Spatial convolution:',x.shape)
         x = self.maxPool1(x)
-        #print('Max pooling：',x.shape)
+        # print('Max pooling：',x.shape)
 
         x1 = F.elu(self.batchnorm3(self.conv3(self.drop3(x))))
         x_dilated = F.elu(self.batchnormDil(self.dilatedconv(self.dropDil(x1))))
@@ -83,16 +83,16 @@ class CP_MixedNet(nn.Module):
         #print('Undilated Convolution2:', x_undilated.shape)
 
         x = torch.cat((x, x_dilated, x_undilated),dim=1)
-        #print('Concatenated:', x.shape)
+        # print('Concatenated:', x.shape)
         x = self.poolConcatenated(self.batchnorm_cancat(x))
         #print('MixedScaleConv:', x.shape)
 
         x = F.elu(self.batchnorm5(self.conv5(self.drop5(x))))
         #print('Conv5:', x.shape)
         x = self.maxPool2(x)
-        #print('maxPool2:', x.shape)
+        # print('maxPool2:', x.shape)
         x = x.view(-1, 8325)
-        #print('beforeFC:', x.shape)
+        # print('beforeFC:', x.shape)
         x = F.relu(self.batchnorm6(self.fc(x)))
         #print('FC:', x.shape)
         x = self.softmax(x)

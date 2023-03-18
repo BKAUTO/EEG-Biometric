@@ -1,9 +1,10 @@
 dataset:
   name: PhysioDataset
   location: ../data/physionet/physionet.org/files/eegmmidb/1.0.0
+  preprocess: false
 
 model:
-  name: FBCNet
+  name: MIXED_FBCNet
 
 optimizer:
   initial_lr: 0.001
@@ -11,15 +12,16 @@ optimizer:
 
 channel:
   number: 10
+  select: true
 
 transform:
   name: nBand
 
 train:
-  subject: 7
+  subject: 4
   batch_size: 4
   epochs: 300
-  trained_model_path: ../trained/5/
+  trained_model_path: ../trained/
 
 evaluate:
   batch_size: 4

@@ -1,0 +1,27 @@
+dataset:
+  name: BCI2aDataset
+  location: ../data/BCI_2a/
+  preprocess: false
+
+model:
+  name: CP_MIXEDNET
+
+optimizer:
+  initial_lr: 0.0005
+  weight_decay: 0.01
+
+channel:
+  number: 22
+  select: false
+
+transform:
+  name: Normal
+
+train:
+  subject: 10
+  batch_size: 16
+  epochs: 300
+  trained_model_path: ../trained/
+
+evaluate:
+  batch_size: 16

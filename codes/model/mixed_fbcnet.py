@@ -52,7 +52,7 @@ class LinearWithConstraint(nn.Linear):
             )
         return super(LinearWithConstraint, self).forward(x)
 
-class FBCNet(nn.Module):
+class MIXED_FBCNet(nn.Module):
     '''
     The data input is in a form of batch x 1 x chan x time x filterBand
     '''
@@ -123,7 +123,7 @@ class FBCNet(nn.Module):
     def ConcatPooling(self, m, nBands, nTimeFilter):
         return nn.Sequential(
             nn.BatchNorm2d(2*m*nBands*nTimeFilter + m*nBands),
-            nn.MaxPool2d((1,45), stride=45, padding=0)
+            nn.MaxPool2d((1,32), stride=32, padding=0)
         )
 
     def Classifier(self, m, nBands, nTimeFilter, doWeightNorm=True):
@@ -143,7 +143,7 @@ class FBCNet(nn.Module):
     
 
     def __init__(self, nChan, nProjChan=30, nBands=9, m=32, nTimeFilter=28, doWeightNorm=True, strideFactor=5, nClass=2, *args, **kwargs):
-        super(FBCNet, self).__init__()
+        super(MIXED_FBCNet, self).__init__()
 
         # channel Projection
         self.channelProj = self.ChannelProj(nChan, nProjChan, doWeightNorm=doWeightNorm)
@@ -177,11 +177,14 @@ class FBCNet(nn.Module):
         # Spatial Conv
         x = self.spatialConv(x)     # n*(32*9)*1*1125
         # Variance Conv
+        # print(x.shape)
         x_var = x.reshape([*x.shape[0:2], self.strideFactor, int(x.shape[3]/self.strideFactor)]) # n*(32*9*4)*4*(1116/2)
         x_var = self.varLayer(x_var)
         x_var = torch.transpose(x_var, 2, 3)
+        # print(x_var.shape)
         # Stand Temp
         x = self.standTemporalLayer(x)
+        # print(x.shape)
         # # Dilate Temp
         # x_dilate = self.dilateTemporalLayer(x)
         # Concat

@@ -1,0 +1,27 @@
+dataset:
+  name: PhysioDataset
+  location: ../data/physionet/physionet.org/files/eegmmidb/1.0.0
+  preprocess: true
+
+model:
+  name: FBCNet
+
+optimizer:
+  initial_lr: 0.001
+  weight_decay: 0.01
+
+channel:
+  number: 64
+  select: false
+
+transform:
+  name: nBand
+
+train:
+  subject: 2
+  batch_size: 4
+  epochs: 300
+  trained_model_path: ../trained/
+
+evaluate:
+  batch_size: 4
