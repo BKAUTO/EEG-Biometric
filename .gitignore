@@ -2,7 +2,6 @@ test.py
 codes/util/__pycache__/
 codes/model/__pycache__/
 data/
-trained/*
 codes/*.txt
 codes/logs/
 result
